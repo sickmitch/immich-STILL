@@ -1,1 +1,7 @@
-conf.json
+/conf.json
+/state/
+/logs/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.venv/

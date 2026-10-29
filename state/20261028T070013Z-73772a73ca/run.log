@@ -1,8 +1,0 @@
-[2026-10-28T07:00:13.341922+00:00] Modalità=convert; journal=/home/mike/data/tech/script/server/immich-still-native-v1.1.0/state/20261028T070013Z-73772a73ca; proprietario UID=1000
-[2026-10-28T07:00:13.363012+00:00] Cursor: riparto dopo e385c695-e184-4a60-842b-e603d2167e19 @ 2026-10-19T05:20:15.097000+00:00
-[2026-10-28T07:00:13.365629+00:00] Sanity wall attiva: asset con fileCreatedAt >= 2026-09-23T00:00:00+00:00
-[2026-10-28T07:00:13.975547+00:00] Quota (sola osservazione): {"calculated":51010762237,"missingSizes":0,"stored":51010762237}
-[2026-10-28T07:00:13.981277+00:00] Nessun downtime / SQL di modifica / sudo. Cestino nativo: 7 giorni.
-[2026-10-28T07:00:16.156205+00:00] CANDIDATO 4efce932-4edc-4746-ad23-6d67f852ea1f: 6117201 -> 1620448 byte; nuova still PXL_20261027_161618068.STILL.jpg
-[2026-10-28T07:00:20.510299+00:00] STILL ID=ec43df9f-1cba-435b-8c5d-54bf251fc4b0; attendo metadati/date equivalenti
-[2026-10-28T07:00:39.380523+00:00] COMPLETATO: still ec43df9f-1cba-435b-8c5d-54bf251fc4b0; Motion 4efce932-4edc-4746-ad23-6d67f852ea1f nel cestino nativo. Video lasciato a Immich.
