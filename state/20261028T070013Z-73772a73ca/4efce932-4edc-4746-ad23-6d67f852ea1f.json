@@ -1,0 +1,312 @@
+{
+  "backup_name": "4efce932-4edc-4746-ad23-6d67f852ea1f.original.jpg",
+  "before": {
+    "albums": [],
+    "asset": {
+      "checksum": "\\x45a805f0a2fd72dbf54b81050256b2f16af6f680",
+      "checksumAlgorithm": "sha1",
+      "createdAt": "2026-10-27T15:16:59.001344+00:00",
+      "deletedAt": null,
+      "duplicateId": null,
+      "duration": null,
+      "fileCreatedAt": "2026-10-27T15:16:18.068+00:00",
+      "fileModifiedAt": "2026-10-27T15:16:21+00:00",
+      "height": 3264,
+      "id": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+      "isEdited": false,
+      "isExternal": false,
+      "isFavorite": false,
+      "isOffline": false,
+      "libraryId": null,
+      "livePhotoVideoId": "786f3362-eaa2-4afe-b639-4a305b0d6493",
+      "localDateTime": "2026-10-27T16:16:18.068+00:00",
+      "originalFileName": "PXL_20261027_161618068.MV.jpg",
+      "originalPath": "/photos/library/admin/2026/2026-10-27/PXL_20261027_161618068.MV.jpg",
+      "ownerId": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+      "stackId": null,
+      "status": "active",
+      "thumbhash": "\\x24080a05000c97798687c668988467872f3c9d0584",
+      "type": "IMAGE",
+      "updateId": "01a17def-acd2-79bd-96ba-1b73a220c08a",
+      "updatedAt": "2026-10-27T15:17:01.778512+00:00",
+      "visibility": "timeline",
+      "width": 2448
+    },
+    "covers": [],
+    "exif": {
+      "assetId": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+      "autoStackId": null,
+      "bitsPerSample": 8,
+      "city": null,
+      "colorspace": "sRGB",
+      "country": null,
+      "dateTimeOriginal": "2026-10-27T15:16:18.068+00:00",
+      "description": "",
+      "exifImageHeight": 3264,
+      "exifImageWidth": 2448,
+      "exposureTime": "1/33",
+      "fNumber": 1.8,
+      "fileSizeInByte": 6117201,
+      "focalLength": 5.58,
+      "fps": null,
+      "iso": 391,
+      "latitude": null,
+      "lensModel": "Fairphone",
+      "livePhotoCID": null,
+      "lockedProperties": null,
+      "longitude": null,
+      "make": "FP4 (FP4)",
+      "model": "Fairphone",
+      "modifyDate": "2026-10-27T15:16:21+00:00",
+      "orientation": "1",
+      "profileDescription": "sRGB IEC61966-2.1",
+      "projectionType": null,
+      "rating": null,
+      "state": null,
+      "tags": null,
+      "timeZone": "UTC+1",
+      "updateId": "01a17def-a508-7594-9dd3-23f90f70b491",
+      "updatedAt": "2026-10-27T15:16:59.78447+00:00"
+    },
+    "faces": [],
+    "files": [
+      {
+        "assetId": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+        "createdAt": "2026-10-27T15:17:01.76624+00:00",
+        "id": "6941e33a-cfa5-41c5-be36-ebc6b57c8912",
+        "isEdited": false,
+        "isProgressive": false,
+        "isTransparent": false,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/4e/fc/4efce932-4edc-4746-ad23-6d67f852ea1f_thumbnail.jpeg",
+        "type": "thumbnail",
+        "updateId": "01a17def-acc9-7aa5-814d-c71220e94cfa",
+        "updatedAt": "2026-10-27T15:17:01.76624+00:00"
+      },
+      {
+        "assetId": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+        "createdAt": "2026-10-27T15:17:01.76624+00:00",
+        "id": "e71d4c1c-4343-4ff4-851b-706aec5a4704",
+        "isEdited": false,
+        "isProgressive": false,
+        "isTransparent": false,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/4e/fc/4efce932-4edc-4746-ad23-6d67f852ea1f_preview.jpeg",
+        "type": "preview",
+        "updateId": "01a17def-acc7-7d91-bfec-699a770da445",
+        "updatedAt": "2026-10-27T15:17:01.76624+00:00"
+      }
+    ],
+    "job": {
+      "assetId": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+      "duplicatesDetectedAt": "2026-10-27T15:17:04.958+00:00",
+      "facesRecognizedAt": "2026-10-27T15:17:04.61+00:00",
+      "metadataExtractedAt": "2026-10-27T15:17:00.399+00:00",
+      "ocrAt": "2026-10-27T15:17:04.938+00:00"
+    },
+    "metadata": [],
+    "sharedLinks": [],
+    "stack": null,
+    "tags": []
+  },
+  "conversion": {
+    "bytes_after_image_components": 0,
+    "exif_bit_identical": true,
+    "exif_payload_sha256": [
+      "1a43fd452d89f19e8e8f0b7b23d18685a5558fc763e4f077e02824aa2c31e900"
+    ],
+    "extended_xmp_bit_identical": true,
+    "extended_xmp_sha256": {
+      "2F61F10CFE305059293B4B343F543257": "433c1bc244c3db75f8000136752e4e0fe7f62f7b6c2b351cdef30ae14bb96aee"
+    },
+    "gainmap_bit_identical": true,
+    "gainmap_bytes": 9718,
+    "gainmap_dimensions": [
+      750,
+      1000
+    ],
+    "gainmap_sha256": "4310d610c046c418bcead6b64a3455d8bc4a6e0239534f9efa1eb969c7dbc119",
+    "icc_bit_identical": true,
+    "icc_payload_sha256": [
+      "2a4cbd9ad67b9feb11b4652d5cd5af1abaeae1d726d368eacf059313943ff89f"
+    ],
+    "image_scan_sha256": [
+      "6173b7808a7940e3dd7787e651c6be225995973551757fc56f7e6763e5adca8d"
+    ],
+    "image_scans_bit_identical": true,
+    "mp4_top_level_boxes": [
+      {
+        "bytes": 28,
+        "offset": 0,
+        "type": "ftyp"
+      },
+      {
+        "bytes": 4493327,
+        "offset": 28,
+        "type": "mdat"
+      },
+      {
+        "bytes": 3398,
+        "offset": 4493355,
+        "type": "moov"
+      }
+    ],
+    "original_bytes": 6117201,
+    "original_sha1": "45a805f0a2fd72dbf54b81050256b2f16af6f680",
+    "original_sha256": "5f9e926b4c1dd88dd89eabf6b668a971517cc5f79753b5989857305bc5397cc1",
+    "primary_dimensions": [
+      2448,
+      3264
+    ],
+    "primary_jpeg_bytes": 1610730,
+    "profile": "GCam legacy MicroVideo 1 + optional HDR gain map",
+    "reduction_percent": 73.51,
+    "standard_motion_tags_after": [],
+    "still_bytes": 1620448,
+    "still_sha1": "53757458696e01f6aee74e37bc946b44390d0557",
+    "still_sha256": "a35ad61d6f6a3734e97c57df1af2ed701e3f28445f6513d6ce920f1a2ee912f8",
+    "tags_removed": {
+      "MicroVideo": "1",
+      "MicroVideoOffset": "4496753",
+      "MicroVideoPresentationTimestampUs": "1399985",
+      "MicroVideoVersion": "1"
+    },
+    "video_bytes_removed": 4496753
+  },
+  "device_metadata_not_copied": [],
+  "existing_still_ids": [],
+  "filename": "PXL_20261027_161618068.STILL.jpg",
+  "filesystem": {
+    "bytes": 6117201,
+    "device": 50,
+    "gid": 100999,
+    "inode": 163978,
+    "mode": 420,
+    "mtime_ns": 1793114181000000000,
+    "uid": 100999
+  },
+  "format": "immich-still-native-v1.1",
+  "id": "4efce932-4edc-4746-ad23-6d67f852ea1f",
+  "journal_updated": "2026-10-28T07:00:39.351317+00:00",
+  "owner": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+  "payload_name": "4efce932-4edc-4746-ad23-6d67f852ea1f.still.jpg",
+  "phase": "completed",
+  "reuse_authorized": false,
+  "run_id": "20261028T070013Z-73772a73ca",
+  "sidecar_name": "4efce932-4edc-4746-ad23-6d67f852ea1f.still.xmp",
+  "sidecar_sha256": "bc6c15e38f6c373c0b6a8a587db197dbb222b8e6c5d7e12fc1c22e1547e162a0",
+  "source_deleted_at": "2026-10-28T07:00:36.451+00:00",
+  "source_sidecars": {},
+  "target_final": {
+    "bytes": 1620448,
+    "checksum": "53757458696e01f6aee74e37bc946b44390d0557",
+    "createdAt": "2026-10-28T07:00:20.3088+00:00",
+    "dates": {
+      "fileCreatedAt": "2026-10-27T15:16:18.068+00:00",
+      "fileModifiedAt": "2026-10-27T15:16:21+00:00",
+      "localDateTime": "2026-10-27T16:16:18.068+00:00"
+    },
+    "id": "ec43df9f-1cba-435b-8c5d-54bf251fc4b0",
+    "originalPath": "/photos/library/admin/2026/2026-10-27/PXL_20261027_161618068.STILL.jpg"
+  },
+  "target_id": "ec43df9f-1cba-435b-8c5d-54bf251fc4b0",
+  "thumbnail": {
+    "at": "2026-10-28T07:00:25.486752+00:00",
+    "baseline": {
+      "preview": {
+        "bytes": 272537,
+        "http": {
+          "bytes": 272537,
+          "content_type": "image/jpeg",
+          "sha256": "8186f3124813bf85381a1db870831c69a1187148d24921c1590ac0e18331e6d9",
+          "status": 200
+        },
+        "inode": 164123,
+        "mtime_ns": 1793170822306279157,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/ec/43/ec43df9f-1cba-435b-8c5d-54bf251fc4b0_preview.jpeg",
+        "sha256": "8186f3124813bf85381a1db870831c69a1187148d24921c1590ac0e18331e6d9"
+      },
+      "thumbnail": {
+        "bytes": 15562,
+        "http": {
+          "bytes": 15562,
+          "content_type": "image/jpeg",
+          "sha256": "e09c5064073aadbf2aa17224b6dfe117dc55e9fc9fea3d3b82da8e6e647551b2",
+          "status": 200
+        },
+        "inode": 164122,
+        "mtime_ns": 1793170822280279078,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/ec/43/ec43df9f-1cba-435b-8c5d-54bf251fc4b0_thumbnail.jpeg",
+        "sha256": "e09c5064073aadbf2aa17224b6dfe117dc55e9fc9fea3d3b82da8e6e647551b2"
+      }
+    },
+    "outputs": {
+      "preview": {
+        "bytes": 272537,
+        "http": {
+          "bytes": 272537,
+          "content_type": "image/jpeg",
+          "sha256": "8186f3124813bf85381a1db870831c69a1187148d24921c1590ac0e18331e6d9",
+          "status": 200
+        },
+        "inode": 164123,
+        "mtime_ns": 1793170826738292656,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/ec/43/ec43df9f-1cba-435b-8c5d-54bf251fc4b0_preview.jpeg",
+        "sha256": "8186f3124813bf85381a1db870831c69a1187148d24921c1590ac0e18331e6d9"
+      },
+      "thumbnail": {
+        "bytes": 15562,
+        "http": {
+          "bytes": 15562,
+          "content_type": "image/jpeg",
+          "sha256": "e09c5064073aadbf2aa17224b6dfe117dc55e9fc9fea3d3b82da8e6e647551b2",
+          "status": 200
+        },
+        "inode": 164122,
+        "mtime_ns": 1793170826732292638,
+        "path": "/photos/thumbs/81c383e8-e720-4a99-b8d5-0831ad48f3e4/ec/43/ec43df9f-1cba-435b-8c5d-54bf251fc4b0_thumbnail.jpeg",
+        "sha256": "e09c5064073aadbf2aa17224b6dfe117dc55e9fc9fea3d3b82da8e6e647551b2"
+      }
+    },
+    "status": "verified",
+    "verified_at": "2026-10-28T07:00:32.377390+00:00"
+  },
+  "trash_days_observed": 7,
+  "trash_requested_at": "2026-10-28T07:00:36.131058+00:00",
+  "trash_verified_at": "2026-10-28T07:00:39.350574+00:00",
+  "upload_requested_at": "2026-10-28T07:00:18.112647+00:00",
+  "upload_response": {
+    "id": "ec43df9f-1cba-435b-8c5d-54bf251fc4b0",
+    "status": "created"
+  },
+  "upload_token": "ea0b3c36-0b76-4969-9292-a31c700394c9",
+  "verified_target_at": "2026-10-28T07:00:36.130999+00:00",
+  "video_before": {
+    "checksum": "\\x14642a8113db5d594f07b03a1a7ef449e7b67b9d",
+    "checksumAlgorithm": "sha1",
+    "createdAt": "2026-10-27T15:16:59.808688+00:00",
+    "deletedAt": null,
+    "duplicateId": null,
+    "duration": 2904,
+    "fileCreatedAt": "2026-10-27T15:16:18+00:00",
+    "fileModifiedAt": "2026-10-27T15:16:59.944+00:00",
+    "height": 640,
+    "id": "786f3362-eaa2-4afe-b639-4a305b0d6493",
+    "isEdited": false,
+    "isExternal": false,
+    "isFavorite": false,
+    "isOffline": false,
+    "libraryId": null,
+    "livePhotoVideoId": null,
+    "localDateTime": "2026-10-27T15:16:18+00:00",
+    "originalFileName": "PXL_20261027_161618068.MV.mp4",
+    "originalPath": "/photos/encoded-video/81c383e8-e720-4a99-b8d5-0831ad48f3e4/78/6f/786f3362-eaa2-4afe-b639-4a305b0d6493-MP.mp4",
+    "ownerId": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+    "stackId": null,
+    "status": "active",
+    "thumbhash": null,
+    "type": "VIDEO",
+    "updateId": "01a17def-a742-7f3a-96c5-e292a2e4c3e4",
+    "updatedAt": "2026-10-27T15:17:00.354588+00:00",
+    "visibility": "hidden",
+    "width": 480
+  }
+}

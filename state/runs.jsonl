@@ -1,0 +1,2 @@
+{"event": "created", "mode": "convert", "path": "/home/mike/data/tech/script/server/immich-still-native-v1.1.0/state/20261028T070013Z-73772a73ca", "created": "2026-10-28T07:00:13.173087+00:00", "directory_identity": [50, 166092], "root_identity": [50, 164902], "marker_sha256": "3b58001174e7ce78656f9fb238af4983b08df0a2379b2714d81952ece609b807"}
+{"event": "closed", "path": "/home/mike/data/tech/script/server/immich-still-native-v1.1.0/state/20261028T070013Z-73772a73ca", "at": "2026-10-28T07:00:39.540653+00:00", "status": "completed"}

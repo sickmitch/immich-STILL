@@ -1,0 +1,69 @@
+{
+  "config": {
+    "container_storage_path": "/photos",
+    "db_container": "immich-postgres",
+    "db_host": "127.0.0.1",
+    "db_name": "immich",
+    "db_port": 5432,
+    "db_user": "mike",
+    "host_storage_path": "/home/mike/data/images/Foto",
+    "immich_url": "https://immich.sickmitch.cc"
+  },
+  "config_path": "/home/mike/data/tech/script/server/immich-still-native-v1.1.0/conf.json",
+  "containers": [
+    {
+      "id": "7e67f0f65b91c8c87667c72a2ac2f055ce8e2dc648457836c28bff58481f87d6",
+      "name": "immich",
+      "restart_policy": {
+        "MaximumRetryCount": 0,
+        "Name": "unless-stopped"
+      }
+    }
+  ],
+  "created": "2026-10-28T07:00:13.179022+00:00",
+  "database": {
+    "database": "immich",
+    "system": "7638880337039732780"
+  },
+  "docker": {
+    "endpoint": "unix:///run/user/1000/docker.sock",
+    "id": "40675af6-19e2-476c-9c54-b18e5f8ae715",
+    "security_options": [
+      "name=seccomp,profile=builtin",
+      "name=rootless",
+      "name=cgroupns"
+    ]
+  },
+  "durable_pairs": [
+    "4efce932-4edc-4746-ad23-6d67f852ea1f"
+  ],
+  "format": "immich-still-native-v1.1",
+  "mode": "convert",
+  "owner": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+  "sanity_wall": "2026-09-23T00:00:00+00:00",
+  "selection": [
+    "4efce932-4edc-4746-ad23-6d67f852ea1f"
+  ],
+  "selection_cursor_after": {
+    "fileCreatedAt": "2026-10-19T05:20:15.097000+00:00",
+    "id": "e385c695-e184-4a60-842b-e603d2167e19",
+    "note": "completed",
+    "run": "/home/mike/immich-still-native-v1.1.0/state/20261019T052314Z-61a4b2ec72",
+    "schema": "immich-still-native/cursor-1",
+    "updatedAt": "2026-10-19T05:24:05.424531+00:00"
+  },
+  "server": {
+    "owner": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+    "trash_days": 7,
+    "trash_enabled": true,
+    "version": {
+      "major": 3,
+      "minor": 3,
+      "patch": 5,
+      "prerelease": null
+    }
+  },
+  "skipped": 0,
+  "status": "completed",
+  "version": "1.1.0"
+}
