@@ -99,6 +99,8 @@ class JournalTests(unittest.TestCase):
                 root,
                 asset_id=ASSET_ID,
                 file_created_at=DATE,
+                created_at=DATE,
+                scope={"owner": ASSET_ID},
                 note="completed",
                 run_path=root / "run",
             )
@@ -156,19 +158,23 @@ class SafetyTests(unittest.TestCase):
 
 class WorkflowTests(unittest.TestCase):
     def selection(self, args):
-        cfg = SimpleNamespace(state=Path("/unused"))
+        cfg = SimpleNamespace(state=Path("/unused"), data={"recovery_attempts": 1})
         db = Mock()
+        db.ingestion_boundary.return_value = {"id": ASSET_ID, "createdAt": DATE}
         db.selection.return_value = [ASSET_ID]
-        db.asset.return_value = {"asset": {"id": ASSET_ID, "fileCreatedAt": DATE}}
+        db.asset.return_value = {
+            "asset": {"id": ASSET_ID, "fileCreatedAt": DATE, "createdAt": DATE}
+        }
         db.quota.return_value = {}
         j = Mock(info={}, path=Path("/unused/run"))
-        engine = Mock()
+        engine = Mock(db=db)
         pair = {
             "id": ASSET_ID,
             "phase": "prepared",
             "conversion": {"original_bytes": 100, "still_bytes": 70},
             "filename": "photo.STILL.jpg",
             "existing_still_ids": [],
+            "before": db.asset.return_value,
         }
         engine.prepare.return_value = (pair, b"original", b"still", b"sidecar")
         return cfg, db, j, engine, pair
@@ -187,7 +193,7 @@ class WorkflowTests(unittest.TestCase):
         save.assert_not_called()
 
     def test_success_advances_cursor_after_processing(self):
-        args = cli.parse(["--asset-id", ASSET_ID])
+        args = cli.parse([])
         cfg, db, j, engine, pair = self.selection(args)
         events = []
         engine.process.side_effect = lambda pair: events.append("processed")
@@ -203,7 +209,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(j.info["skipped"], 0)
 
     def test_existing_still_is_skipped_without_upload(self):
-        args = cli.parse(["--asset-id", ASSET_ID])
+        args = cli.parse([])
         cfg, db, j, engine, pair = self.selection(args)
         pair["existing_still_ids"] = ["existing"]
         with patch.object(journal, "save_cursor") as save:
@@ -219,19 +225,21 @@ class WorkflowTests(unittest.TestCase):
     def test_pending_conversion_keeps_cursor(self):
         from immich_still.core import Pending
 
-        args = cli.parse(["--asset-id", ASSET_ID])
+        args = cli.parse([])
         cfg, db, j, engine, pair = self.selection(args)
         engine.process.side_effect = Pending("metadata not ready")
         with patch.object(journal, "save_cursor") as save:
-            with self.assertRaises(Pending):
+            self.assertEqual(
                 cli.process_selection(
                     args, cfg, db, j, engine, ASSET_ID, {"trash_days": 30}
-                )
+                ),
+                3,
+            )
         save.assert_not_called()
         engine.stage.assert_called_once()
 
     def test_skipped_candidate_advances_cursor(self):
-        args = cli.parse(["--asset-id", ASSET_ID])
+        args = cli.parse([])
         cfg, db, j, engine, pair = self.selection(args)
         engine.prepare.side_effect = Unsupported("unsupported profile")
         with patch.object(journal, "save_cursor") as save:
@@ -246,17 +254,18 @@ class WorkflowTests(unittest.TestCase):
     def test_api_failure_is_not_treated_as_skip(self):
         from immich_still.api import ApiError
 
-        args = cli.parse(["--asset-id", ASSET_ID])
+        args = cli.parse([])
         cfg, db, j, engine, pair = self.selection(args)
         engine.prepare.side_effect = ApiError("unavailable")
-        with patch.object(journal, "save_cursor") as save, self.assertRaises(ApiError):
-            cli.process_selection(
+        with patch.object(journal, "save_cursor") as save:
+            result = cli.process_selection(
                 args, cfg, db, j, engine, ASSET_ID, {"trash_days": 30}
             )
+        self.assertEqual(result, 3)
         save.assert_not_called()
         j.save_pair.assert_not_called()
 
-    def test_resume_marks_unstarted_and_respects_limit(self):
+    def test_resume_keeps_unstarted_and_respects_limit(self):
         args = cli.parse(["--resume", "/unused/run", "--limit", "1"])
         second = "22222222-2222-4222-8222-222222222222"
         third = "33333333-3333-4333-8333-333333333333"
@@ -264,12 +273,19 @@ class WorkflowTests(unittest.TestCase):
             {
                 "id": key,
                 "phase": "staged",
-                "before": {"asset": {"id": key, "fileCreatedAt": DATE}},
+                "before": {
+                    "asset": {"id": key, "fileCreatedAt": DATE, "createdAt": DATE}
+                },
             }
             for key in (ASSET_ID, second)
         ]
         j = Mock(
-            info={"selection": [ASSET_ID, second, third]}, path=Path("/unused/run")
+            info={
+                "selection": [ASSET_ID, second, third],
+                "cursor_mode": journal.CURSOR_SCHEMA,
+                "selection_scope": {},
+            },
+            path=Path("/unused/run"),
         )
         j.pairs.side_effect = lambda: list(pairs)
         j.save_pair.side_effect = pairs.append
@@ -277,12 +293,16 @@ class WorkflowTests(unittest.TestCase):
         engine.process.side_effect = lambda pair: pair.update(phase="completed")
         with patch.object(journal, "save_cursor") as save:
             result = cli.resume_run(
-                args, SimpleNamespace(state=Path("/unused")), j, engine
+                args,
+                SimpleNamespace(state=Path("/unused"), data={"recovery_attempts": 1}),
+                j,
+                engine,
             )
         self.assertEqual(result, 3)
         self.assertEqual(j.info["status"], "pending")
-        self.assertEqual(pairs[-1]["id"], third)
-        self.assertEqual(pairs[-1]["phase"], "skipped")
+        self.assertEqual(len(pairs), 2)
+        self.assertEqual(pairs[-1]["phase"], "staged")
+        j.save_pair.assert_not_called()
         engine.process.assert_called_once_with(pairs[0])
         save.assert_called_once()
 

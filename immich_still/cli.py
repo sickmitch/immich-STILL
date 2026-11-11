@@ -6,6 +6,7 @@ Never stop containers, never mutate catalog SQL, never unlink/recreate/purge the
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import shutil
@@ -15,29 +16,36 @@ import sys
 from pathlib import Path
 
 from . import core, journal
-from .api import Api, ApiError
+from .api import Api
 from .core import (
-    FORMAT,
     VERSION,
     Config,
     Pending,
     Stop,
     canonical_id,
     checked_run,
-    compact,
-    instant,
     require,
 )
 from .db import Database
 from .engine import Engine
-from .gcam import Unsupported
+from .workflow import (
+    configured_wall,
+    process_selection,
+    recover_runs,
+    resume_run,
+    validate_run,
+    verify_run,
+)
 
-SANITY_WALL_TS = "2026-09-23T00:00:00+00:00"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def parse(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        allow_abbrev=False,
+        epilog="Default: conversione, limite 0; nessun filtro temporale senza sanity_wall nel JSON.",
+    )
     parser.add_argument(
         "--version",
         action="version",
@@ -71,12 +79,21 @@ def parse(argv=None):
         "--sanity-wall",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Limita la selezione a fileCreatedAt >= 2026-09-23T00:00:00Z (attivo di default)",
+        help="Applica sanity_wall da conf.json se presente; --no-sanity-wall la disabilita",
     )
     parser.add_argument(
         "--non-interactive", action="store_true", help=argparse.SUPPRESS
     )
-    parser.add_argument("--state-dir", type=Path)
+    parser.add_argument(
+        "--state-dir",
+        type=Path,
+        help="Stato: override CLI, directory del RUN, native_state_dir nel JSON, oppure state accanto a conf.json",
+    )
+    parser.add_argument(
+        "--show-paths",
+        action="store_true",
+        help="Mostra percorsi e opzioni effettive senza avviare operazioni",
+    )
     args = parser.parse_args(argv)
     if not any(
         (
@@ -100,6 +117,63 @@ def parse(argv=None):
         except Stop as e:
             parser.error(str(e))
     return args
+
+
+def state_override(args):
+    run = args.resume or args.verify
+    return args.state_dir or (run.expanduser().absolute().parent if run else None)
+
+
+def show_paths(args):
+    config = args.config.expanduser().absolute()
+    data = core.configure(config) if config.exists() else {}
+    state = core.state_path(config, state_override(args), data)
+    source = (
+        "--state-dir"
+        if args.state_dir
+        else "RUN"
+        if args.resume or args.verify
+        else "native_state_dir"
+        if data.get("native_state_dir")
+        else "config-directory"
+    )
+
+    def describe(path):
+        return {
+            "path": str(path),
+            "resolved": str(path.resolve()),
+            "exists": path.exists(),
+            "canonical": path == path.resolve(),
+        }
+
+    result = {
+        "script_directory": str(PROJECT_ROOT),
+        "working_directory": str(Path.cwd()),
+        "config": describe(config),
+        "state": {**describe(state), "source": source},
+        "cursor": describe(state / journal.CURSOR_FILE),
+        "options": {
+            "mode": next(
+                name
+                for name in (
+                    "resume",
+                    "verify",
+                    "audit",
+                    "check_db",
+                    "list_runs",
+                    "verify_journal",
+                    "convert",
+                )
+                if getattr(args, name)
+            ),
+            "limit": args.limit,
+            "sanity_wall": configured_wall(args, data),
+            "include_archived": args.include_archived,
+            "asset_id": args.asset_id,
+        },
+    }
+    print(json.dumps(result, indent=2))
+    return 0
 
 
 def pin_docker():
@@ -194,169 +268,10 @@ def local_mode(args):
     return 0
 
 
-def candidate_marker(snapshot):
-    asset = (snapshot or {}).get("asset") or {}
-    require(
-        asset.get("id") and asset.get("fileCreatedAt"),
-        "Snapshot asset incompleto per il cursor",
-    )
-    return {
-        "id": canonical_id(asset["id"]),
-        "fileCreatedAt": instant(asset["fileCreatedAt"]).isoformat(),
-    }
-
-
-def advance_cursor(args, cfg, run, marker, note):
-    if args.convert or args.resume:
-        journal.save_cursor(
-            cfg.state,
-            asset_id=marker["id"],
-            file_created_at=marker["fileCreatedAt"],
-            note=note,
-            run_path=run.path,
-        )
-
-
-def verify_run(args, run, engine):
-    pairs = run.pairs()
-    pairs = pairs[: args.limit] if args.limit else pairs
-    for pair in pairs:
-        if pair.get("phase") == "skipped":
-            continue
-        run.log("VERIFICA: " + compact(engine.verify(pair)))
-    return 0
-
-
-def resume_run(args, cfg, run, engine):
-    durable = {pair["id"] for pair in run.pairs()}
-    for source_id in run.info.get("selection", []):
-        if source_id not in durable:
-            run.save_pair(
-                {
-                    "id": source_id,
-                    "format": FORMAT,
-                    "phase": "skipped",
-                    "reason": "Non iniziato prima dell’interruzione; originale non toccato",
-                }
-            )
-    pairs = run.pairs()
-    pairs = pairs[: args.limit] if args.limit else pairs
-    for pair in pairs:
-        if pair.get("phase") in ("skipped", "audit"):
-            continue
-        engine.process(pair)
-        marker = candidate_marker(pair["before"])
-        advance_cursor(args, cfg, run, marker, "resume-completed")
-    pairs = run.pairs()
-    complete = len(pairs) == len(run.info["selection"]) and all(
-        pair.get("phase") in ("completed", "skipped") for pair in pairs
-    )
-    run.info["status"] = "completed" if complete else "pending"
-    run.save()
-    return 0 if run.info["status"] == "completed" else 3
-
-
-def process_candidate(args, cfg, db, run, engine, asset_id):
-    """Process one candidate; return whether it was deliberately skipped."""
-    source_snapshot = db.asset(asset_id)
-    marker = candidate_marker(source_snapshot)
-    try:
-        pair, original, still, sidecar = engine.prepare(asset_id)
-    except ApiError:
-        raise
-    except (Unsupported, Stop, OSError) as e:
-        run.save_pair(
-            {
-                "id": asset_id,
-                "format": FORMAT,
-                "phase": "skipped",
-                "reason": core.redact(str(e)),
-            }
-        )
-        run.log("SKIP " + asset_id + ": " + str(e))
-        advance_cursor(args, cfg, run, marker, "skipped")
-        return True
-    run.log(
-        "CANDIDATO "
-        + asset_id
-        + ": "
-        + str(pair["conversion"]["original_bytes"])
-        + " -> "
-        + str(pair["conversion"]["still_bytes"])
-        + " byte; nuova still "
-        + pair["filename"]
-    )
-    if pair["existing_still_ids"]:
-        pair["phase"] = "skipped"
-        pair["reason"] = (
-            "Still già presente con checksum identico: nessun riuso automatico in questa release"
-        )
-        run.save_pair(pair)
-        run.log(
-            "SKIP "
-            + asset_id
-            + ": still già presente "
-            + compact(pair["existing_still_ids"])
-        )
-        advance_cursor(args, cfg, run, marker, "skipped-existing-still")
-        return True
-    if not args.convert:
-        pair["phase"] = "audit"
-        run.save_pair(pair)
-        return False
-    engine.stage(pair, original, still, sidecar)
-    engine.process(pair)
-    advance_cursor(args, cfg, run, marker, "completed")
-    return False
-
-
-def process_selection(args, cfg, db, run, engine, owner, metadata):
-    if args.convert:
-        run.unresolved_other_runs()
-    after = None
-    if args.convert and not args.asset_id:
-        after = journal.load_cursor(cfg.state)
-        if after:
-            run.log(
-                "Cursor: riparto dopo " + after["id"] + " @ " + after["fileCreatedAt"]
-            )
-    sanity_wall = SANITY_WALL_TS if args.sanity_wall else None
-    if sanity_wall:
-        run.log("Sanity wall attiva: asset con fileCreatedAt >= " + SANITY_WALL_TS)
-    ids = db.selection(
-        owner,
-        args.limit,
-        args.include_archived,
-        args.asset_id,
-        after=after,
-        sanity_wall=sanity_wall,
-    )
-    run.info["selection"] = ids
-    run.info["selection_cursor_after"] = after
-    run.info["sanity_wall"] = sanity_wall
-    run.save()
-    run.log("Quota (sola osservazione): " + compact(db.quota(owner)))
-    run.log(
-        "Nessun downtime / SQL di modifica / sudo. Cestino nativo: "
-        + str(metadata["trash_days"])
-        + " giorni."
-    )
-    if not ids:
-        run.info["status"] = "completed" if args.convert else "audit"
-        run.save()
-        return 2 if args.asset_id else 0
-    skipped = 0
-    for asset_id in ids:
-        skipped += process_candidate(args, cfg, db, run, engine, asset_id)
-    run.info["status"] = "completed" if args.convert else "audit"
-    run.info["skipped"] = skipped
-    run.save()
-    run.checkpoint(independent=True)
-    return 2 if skipped else 0
-
-
 def main(argv=None):
     args = parse(argv)
+    if args.show_paths:
+        return show_paths(args)
     os.umask(0o077)
     require(
         os.geteuid() != 0, "Avvia come mike, senza sudo. Non servono privilegi root."
@@ -367,7 +282,7 @@ def main(argv=None):
     if old:
         old = old.expanduser().absolute()
         journal.proof(old)
-    cfg = Config(args.config, args.state_dir or (old.parent if old else None))
+    cfg = Config(args.config, state_override(args))
     docker = pin_docker()
     containers = validate_mount(cfg)
     api = Api(cfg, mutating=bool(args.convert or args.resume))
@@ -391,6 +306,17 @@ def main(argv=None):
                 )
             )
             return 0
+        reserved, recovered, pending = set(), 0, 0
+        if args.convert:
+            journal.recover_cursor(cfg.state)
+            reserved, recovered, pending = recover_runs(
+                args, cfg, api, db, docker, identity, owner
+            )
+            if args.limit and recovered >= args.limit:
+                return 3 if pending else 0
+            args = copy.copy(args)
+            if args.limit:
+                args.limit -= recovered
         mode = (
             "resume"
             if args.resume
@@ -402,16 +328,7 @@ def main(argv=None):
         )
         run = journal.Journal(cfg, mode, existing=old)
         if old:
-            require(
-                run.info.get("docker") == docker
-                and run.info.get("database") == identity
-                and run.info.get("owner") == owner,
-                "Journal riferito a altro Docker/database/utente",
-            )
-            require(
-                run.info.get("mode") == "convert",
-                "Questo RUN non è una conversione nativa",
-            )
+            validate_run(run, docker, identity, owner)
         else:
             run.info.update(
                 docker=docker,
@@ -426,35 +343,22 @@ def main(argv=None):
             return verify_run(args, run, engine)
         if args.resume:
             return resume_run(args, cfg, run, engine)
-        return process_selection(args, cfg, db, run, engine, owner, metadata)
+        result = process_selection(
+            args, cfg, db, run, engine, owner, metadata, reserved
+        )
+        return 3 if pending else result
     except (Exception, KeyboardInterrupt) as e:
         if run:
             try:
                 if not args.verify:
                     run.info["status"] = (
                         "pending"
-                        if api.mutating
-                        and any(pair.get("phase") != "skipped" for pair in run.pairs())
+                        if api.mutating and bool(run.info.get("selection"))
                         else "aborted"
                     )
                     run.info["error"] = core.redact(str(e))
                     run.save()
                 run.log("STOP: " + str(e))
-                run.log("Immich non è stato fermato; nessun DELETE viene forzato.")
-                if api.mutating:
-                    import shlex
-
-                    command = [
-                        str(PROJECT_ROOT / "immich-still.sh"),
-                        "--config",
-                        str(cfg.path),
-                        "--resume",
-                        str(run.path),
-                        "--limit",
-                        "0",
-                        "--non-interactive",
-                    ]
-                    run.log("RIPRESA: " + shlex.join(command))
             except Exception:
                 pass
         if isinstance(e, KeyboardInterrupt):
@@ -469,7 +373,7 @@ def main(argv=None):
 
 
 def interrupted(sig, frame):
-    raise KeyboardInterrupt("Interruzione: riprendere il journal")
+    raise KeyboardInterrupt("Interruzione: recupero automatico al prossimo avvio")
 
 
 def entrypoint():
@@ -477,5 +381,5 @@ def entrypoint():
     try:
         return main()
     except (OSError, RuntimeError, ValueError) as error:
-        print("ERRORE: " + core.redact(str(error)), file=sys.stderr)
+        print(core.brief("ERROR " + str(error)), file=sys.stderr)
         return 1

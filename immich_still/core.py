@@ -49,6 +49,11 @@ def redact(text):
     return text
 
 
+def brief(message, limit=200):
+    text = " ".join(redact(str(message)).split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
 VERSION = "1.1.0"
 FORMAT = "immich-still-native-v1.1"
 MAX_BYTES = 256 * 1024 * 1024
@@ -275,6 +280,15 @@ class Config:
         ]:
             d.setdefault(k, default)
             require(type(d[k]) is int and d[k] > 0, "Valore positivo necessario: " + k)
+        for key, default, maximum in (
+            ("recovery_attempts", 3, 10),
+            ("recovery_delay", 5, 60),
+        ):
+            d.setdefault(key, default)
+            require(
+                type(d[key]) is int and 1 <= d[key] <= maximum,
+                f"{key}: richiesto intero tra 1 e {maximum}",
+            )
         self.public_keys = (
             "immich_url",
             "host_storage_path",

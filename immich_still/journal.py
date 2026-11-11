@@ -150,7 +150,8 @@ def proof(path):
     )
 
 
-CURSOR_SCHEMA = "immich-still-native/cursor-1"
+LEGACY_CURSOR_SCHEMA = "immich-still-native/cursor-1"
+CURSOR_SCHEMA = "immich-still-native/cursor-2"
 CURSOR_FILE = "cursor.json"
 
 
@@ -159,13 +160,40 @@ def load_cursor(state_root: Path):
     if not path.exists():
         return None
     data = read(path)
+    require(isinstance(data, dict), "Cursore non oggetto JSON")
     require(
-        data.get("schema") == CURSOR_SCHEMA,
+        data.get("schema") in (LEGACY_CURSOR_SCHEMA, CURSOR_SCHEMA),
         "Cursor non riconosciuto: cancellare " + str(path) + " oppure aggiornarlo",
     )
     canonical_id(data["id"])
     instant(data["fileCreatedAt"])
+    if data["schema"] == CURSOR_SCHEMA:
+        require("discovery" in data, "Cursore senza riferimento ai caricamenti")
+        if data["discovery"] is not None:
+            canonical_id(data["discovery"]["id"])
+            instant(data["discovery"]["createdAt"])
+        require(
+            isinstance(data.get("scope"), dict), "Ambito cursore assente/non valido"
+        )
     return data
+
+
+def recover_cursor(state_root: Path):
+    """A cursor is an optimization, never the authorization for remote writes."""
+    try:
+        return load_cursor(state_root)
+    except (S.Stop, ValueError, KeyError, TypeError) as error:
+        path = state_root / CURSOR_FILE
+        st = path.lstat()
+        require(
+            stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and st.st_uid == os.geteuid(),
+            "Cursore non regolare/proprio: ripristino automatico non consentito",
+        )
+        backup = path.with_name("cursor-invalid-" + uuid.uuid4().hex + ".json")
+        os.replace(path, backup)
+        fsync_dir(state_root)
+        print(S.brief("CURSOR reset backup=" + backup.name + " " + str(error)))
+        return None
 
 
 def save_cursor(
@@ -173,21 +201,77 @@ def save_cursor(
     *,
     asset_id: str,
     file_created_at: str,
+    created_at: str,
+    scope: dict,
     note: str,
     run_path: Path | None,
+    discovery_start=None,
+    recent=False,
 ):
     canonical_id(asset_id)
-    instant(file_created_at)
+    timeline_key = (instant(file_created_at), asset_id)
+    upload_key = (instant(created_at), asset_id)
+    previous = load_cursor(state_root)
+    same_scope = (
+        previous and previous["schema"] == CURSOR_SCHEMA and previous["scope"] == scope
+    )
+    if same_scope:
+        discovery = previous["discovery"]
+        source_id, capture = previous["id"], previous["fileCreatedAt"]
+    else:
+        discovery = discovery_start
+        source_id, capture = asset_id, file_created_at
+    if recent:
+        require(same_scope, "Recupero caricamenti senza cursore timeline")
+        if discovery is None or upload_key > (
+            instant(discovery["createdAt"]),
+            discovery["id"],
+        ):
+            discovery = {"id": asset_id, "createdAt": created_at}
+    elif not same_scope or timeline_key > (instant(capture), source_id):
+        source_id, capture = asset_id, file_created_at
+    if (
+        same_scope
+        and source_id == previous["id"]
+        and capture == previous["fileCreatedAt"]
+        and discovery == previous["discovery"]
+    ):
+        return previous
     payload = {
         "schema": CURSOR_SCHEMA,
         "updatedAt": timestamp(),
-        "id": asset_id,
-        "fileCreatedAt": file_created_at,
+        "id": source_id,
+        "fileCreatedAt": capture,
+        "discovery": discovery,
+        "scope": scope,
         "note": note,
         "run": str(run_path) if run_path else None,
     }
     write(state_root / CURSOR_FILE, payload)
     return payload
+
+
+def pending_runs(root):
+    """Enumerate durable unfinished conversions without modifying their state."""
+    result = []
+    seen = set()
+    for record in entries(root):
+        if record.get("event") != "created" or record.get("mode") in (
+            "audit",
+            "check-write",
+        ):
+            continue
+        path = Path(record["path"])
+        require(path.parent == root, "Registro con run fuori root")
+        require(path not in seen, "Run registrata più volte")
+        seen.add(path)
+        # Lost/corrupted evidence cannot safely be invented. A temporary mount
+        # problem is retried by the next normal invocation, not by forced writes.
+        proof(path)
+        info = read(path / "run.json")
+        if info.get("status") not in TERMINAL:
+            result.append((path, info))
+    return result
 
 
 class Journal:
@@ -269,14 +353,6 @@ class Journal:
         )
         self.save()
         self.checkpoint(independent=True)
-        self.log(
-            "Modalità="
-            + mode
-            + "; journal="
-            + str(self.path)
-            + "; proprietario UID="
-            + str(os.geteuid())
-        )
 
     def guard(self):
         require(
@@ -323,7 +399,12 @@ class Journal:
 
     def log(self, message):
         self.guard()
-        line = "[" + timestamp() + "] " + S.redact(message)
+        line = (
+            "["
+            + dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            + "] "
+            + S.brief(message)
+        )
         self.logfile.write(line + "\n")
         self.logfile.flush()
         os.fsync(self.logfile.fileno())
@@ -354,27 +435,6 @@ class Journal:
                 )
         return result
 
-    def unresolved_other_runs(self):
-        for r in entries(self.root):
-            if r.get("event") != "created" or r.get("path") == str(self.path):
-                continue
-            p = Path(r["path"])
-            require(p.parent == self.root, "Registro con run fuori root")
-            if r.get("mode") in ("audit", "check-write"):
-                continue
-            require(
-                p.is_dir(),
-                "Journal di manutenzione registrato ma mancante: "
-                + str(p)
-                + ". Non inizio nuove scritture.",
-            )
-            proof(p)
-            info = read(p / "run.json")
-            require(
-                info.get("status") in TERMINAL,
-                "Manutenzione precedente incompleta: " + str(p) + ". Usa --resume RUN.",
-            )
-
     def close(self):
         try:
             self.guard()
@@ -389,7 +449,7 @@ class Journal:
             )
         except Exception as e:
             print(
-                "ATTENZIONE: persistenza journal non confermata: " + str(e),
+                S.brief("WARN journal " + str(e)),
                 file=sys.stderr,
             )
         finally:

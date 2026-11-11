@@ -341,15 +341,19 @@ class Database:
             except Exception:
                 # This path is not a password. Never mask the original migration error.
                 print(
-                    "ATTENZIONE: file credenziali temporaneo non eliminato nel container "
+                    "WARN pgpass cleanup "
                     + self.cfg["db_container"]
                     + ": "
                     + path
-                    + "/pgpass. "
-                    "Rimuovere quella directory al termine del processo.",
+                    + "/pgpass",
                     file=sys.stderr,
                 )
         self._auth_ready = False
+
+    def ingestion_boundary(self, owner):
+        return self.query(f"""SELECT jsonb_build_object('id',id,'createdAt',"createdAt")
+          FROM public.asset WHERE "ownerId"='{canonical_id(owner)}'
+          ORDER BY "createdAt" DESC,id DESC LIMIT 1;""")
 
     def selection(
         self,
@@ -360,35 +364,46 @@ class Database:
         *,
         after=None,
         sanity_wall=None,
+        before=None,
+        recent_after=None,
+        excluded=(),
     ):
         specific = (
             "" if asset_id is None else " AND a.id='" + canonical_id(asset_id) + "'"
         )
-        vis = "('timeline','archive')" if archived else "('timeline')"
-        cursor = ""
-        if after:
-            require(isinstance(after, dict), "Cursor di selezione non valido")
-            after_id = canonical_id(after["id"])
-            after_ts = instant(after["fileCreatedAt"]).isoformat()
-            cursor = (
-                ' AND (a."fileCreatedAt",a.id) > (\''
-                + after_ts
-                + "'::timestamptz,'"
-                + after_id
-                + "')"
+        if excluded:
+            specific += (
+                " AND a.id NOT IN ("
+                + ",".join("'" + canonical_id(i) + "'" for i in sorted(excluded))
+                + ")"
             )
+        vis = "('timeline','archive')" if archived else "('timeline')"
+        require(not (after and before), "Selezione: cursori incompatibili")
+
+        def boundary(marker, column, comparison):
+            require(isinstance(marker, dict), "Cursor di selezione non valido")
+            asset = canonical_id(marker["id"])
+            date = instant(marker[column]).isoformat()
+            return f" AND (a.\"{column}\",a.id) {comparison} ('{date}'::timestamptz,'{asset}')"
+
+        cursor = boundary(after, "fileCreatedAt", ">") if after else ""
+        if before:
+            cursor += boundary(before, "fileCreatedAt", "<=")
+            if recent_after:
+                cursor += boundary(recent_after, "createdAt", ">")
         wall = ""
         if sanity_wall:
-            wall_ts = instant(str(sanity_wall)).isoformat()
-            wall = ' AND a."fileCreatedAt" >= \'' + wall_ts + "'::timestamptz"
-        query = f"""
-    SELECT coalesce(jsonb_agg(x.id ORDER BY x."fileCreatedAt",x.id), '[]'::jsonb) FROM (
-     SELECT a.id,a."fileCreatedAt" FROM public.asset a
+            wall_ts = instant(sanity_wall).isoformat()
+            wall = f" AND a.\"fileCreatedAt\" >= '{wall_ts}'::timestamptz"
+        order = "createdAt" if before else "fileCreatedAt"
+        query = f'''
+    SELECT coalesce(jsonb_agg(x.id ORDER BY x."{order}",x.id), '[]'::jsonb) FROM (
+     SELECT a.id,a."{order}" FROM public.asset a
      WHERE a."ownerId"='{canonical_id(owner)}' AND a.type='IMAGE' AND a."deletedAt" IS NULL
       AND a."livePhotoVideoId" IS NOT NULL AND a.visibility IN {vis} {specific}{cursor}{wall}
-     ORDER BY a."fileCreatedAt",a.id {("LIMIT " + str(limit)) if limit else ""}
+     ORDER BY a."{order}",a.id {("LIMIT " + str(limit)) if limit else ""}
     ) x;
-    """
+    '''
         return self.query(query)
 
     def foreign_refs(self, asset_id: str) -> dict:

@@ -100,9 +100,9 @@ def ensure_supported(s, refs):
         or a.get("isExternal")
         or a.get("libraryId")
         or a.get("isEdited")
-        or a.get("isOffline")
     ):
         raise Skip("Solo IMAGE JPEG gestite, online e non modificate nell’editor")
+    require(not a.get("isOffline"), "Sorgente offline: riprovare quando disponibile")
     require(
         a.get("status") == "active"
         and a.get("deletedAt") is None
@@ -110,13 +110,13 @@ def ensure_supported(s, refs):
         "Sorgente non più Motion attiva",
     )
     require(a["visibility"] in ("timeline", "archive"), "Visibilità non supportata")
+    if Path(a["originalPath"]).suffix.lower() not in (".jpg", ".jpeg"):
+        raise Skip("Formato originale non JPEG")
+    if e.get("livePhotoCID"):
+        raise Skip("Pairing Apple: sorgente non trattabile")
     require(
-        Path(a["originalPath"]).suffix.lower() in (".jpg", ".jpeg"),
-        "Formato originale non JPEG",
-    )
-    require(
-        e.get("fileSizeInByte") is not None and not e.get("livePhotoCID"),
-        "Dimensione mancante o pairing Apple: sorgente non trattabile",
+        e.get("fileSizeInByte") is not None,
+        "Dimensione sorgente non ancora disponibile",
     )
     # Face/OCR rows are treated as derived data: the new still is reprocessed natively by Immich.
     unknown = {
@@ -526,6 +526,28 @@ class Engine:
         self.thumb_observation(p)
         return t
 
+    def restore_payloads(self, p):
+        """Rebuild missing local files only from the unchanged active source."""
+        current = self.assert_source(p)
+        original, _ = self.read_source(current)
+        still, proof = convert(original)
+        require(
+            proof == p["conversion"],
+            "Conversione cambiata fra preparazione e ripresa",
+        )
+        old_sidecar = None
+        for f in current.get("files", []):
+            if f["type"] == "sidecar":
+                old_sidecar, _ = file_read(
+                    self.cfg.host_path(f["path"]), 16 * 1024 * 1024
+                )
+        sidecar = make_sidecar(current, old_sidecar)
+        require(
+            sha256(sidecar) == p["sidecar_sha256"],
+            "Sidecar non riproducibile durante ripresa",
+        )
+        self.stage(p, original, still, sidecar)
+
     def process(self, p):
         require(
             p["format"] == FORMAT and p["owner"] == self.owner,
@@ -535,27 +557,7 @@ class Engine:
             self.verify(p)
             return
         if p.get("phase") == "prepared":
-            # Crash during local staging: re-derive only from the still-active verified original.
-            current = self.assert_source(p)
-            original, _ = self.read_source(current)
-            still, proof = convert(original)
-            require(
-                proof == p["conversion"],
-                "Conversione cambiata fra preparazione e ripresa",
-            )
-            old_sidecar = None
-            for f in current.get("files", []):
-                if f["type"] == "sidecar":
-                    old_sidecar, _ = file_read(
-                        self.cfg.host_path(f["path"]), 16 * 1024 * 1024
-                    )
-            sidecar = make_sidecar(current, old_sidecar)
-            require(
-                sha256(sidecar) == p["sidecar_sha256"],
-                "Sidecar non riproducibile durante ripresa",
-            )
-            self.stage(p, original, still, sidecar)
-        _, still, sidecar = self.payloads(p)
+            self.restore_payloads(p)
         existing = self.db.asset(p["id"])
         if not existing.get("asset"):
             require(
@@ -579,8 +581,12 @@ class Engine:
             self.save(p)
             return
         self.assert_source(p)
+        try:
+            _, still, sidecar = self.payloads(p)
+        except FileNotFoundError:
+            self.restore_payloads(p)
+            _, still, sidecar = self.payloads(p)
         self.adopt_or_upload(p, still, sidecar)
-        self.j.log("STILL ID=" + p["target_id"] + "; attendo metadati/date equivalenti")
         self.wait_metadata(p)
         self.assert_source(p)
         self.copy_associations(p)
@@ -629,13 +635,6 @@ class Engine:
         p["trash_verified_at"] = timestamp()
         p["source_deleted_at"] = now["asset"]["deletedAt"]
         self.save(p)
-        self.j.log(
-            "COMPLETATO: still "
-            + p["target_id"]
-            + "; Motion "
-            + p["id"]
-            + " nel cestino nativo. Video lasciato a Immich."
-        )
 
     def verify(self, p):
         require(p.get("target_id"), "Journal senza destinazione")

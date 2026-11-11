@@ -1,8 +1,17 @@
 {
-  "fileCreatedAt": "2026-10-29T07:10:11.712000+00:00",
-  "id": "b58e8be4-d76e-4f4b-8bb6-d160321a5979",
+  "discovery": {
+    "createdAt": "2026-11-10T06:35:05.041313+00:00",
+    "id": "53711bfd-305d-4078-9a2d-f771f322f060"
+  },
+  "fileCreatedAt": "2026-11-09T09:47:42.094000+00:00",
+  "id": "60531922-1f42-4686-a6ff-7eaeabe78913",
   "note": "completed",
-  "run": "/home/mike/data/tech/script/server/immich-still-native-v1.1.0/state/20261029T071923Z-e41284fb87",
-  "schema": "immich-still-native/cursor-1",
-  "updatedAt": "2026-10-29T07:19:47.294378+00:00"
+  "run": "/home/mike/data/tech/script/server/immich-still-native-v1.1.0/state/20261111T130942Z-67a8374d6c",
+  "schema": "immich-still-native/cursor-2",
+  "scope": {
+    "include_archived": false,
+    "owner": "81c383e8-e720-4a99-b8d5-0831ad48f3e4",
+    "sanity_wall": "2026-09-23T00:00:00+00:00"
+  },
+  "updatedAt": "2026-11-11T13:12:54.138196+00:00"
 }
